@@ -1,16 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Welcome, {{ user.username }}</h2>
-<p>Select a user to start a chat:</p>
+<p>Your chats:</p>
 
 <ul class="list-group">
-    {% for user in users %}
+    {% for session in chat_sessions %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>{{ user.username }}</span>
-            <a href="#" class="btn btn-primary">Chat</a>  <!-- Chat button (to be linked later) -->
+            <span>
+                {% if session.user1 == user %}
+                    Chat with {{ session.user2.username }}
+                {% else %}
+                    Chat with {{ session.user1.username }}
+                {% endif %}
+            </span>
+            <a href="{% url 'chat_detail' chat_id=session.id %}" class="btn btn-primary">Open Chat</a>
         </li>
     {% empty %}
-        <li class="list-group-item">No users available.</li>
+        <li class="list-group-item">No chats yet.</li>
     {% endfor %}
 </ul>
+
+<h3>Start a new chat:</h3>
+<ul class="list-group">
+    {% for user in users %}
+        {% if user != request.user %}
+            <li class="list-group-item">
+                <a href="{% url 'start_chat' user.id %}" class="btn btn-info">
+                    Start Chat with {{ user.username }}
+                </a>
+            </li>
+        {% endif %}
+    {% endfor %}
+</ul>
+
 {% endblock %}
