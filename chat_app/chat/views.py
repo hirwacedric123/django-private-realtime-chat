@@ -4,6 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from .models import ChatSession, Message
 from users.models import CustomUser
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import ChatSession, Message
+import json
+from django.shortcuts import get_object_or_404
 
 @login_required
 def chat_home(request):
@@ -15,7 +21,7 @@ def chat_home(request):
 @login_required
 def chat_detail(request, chat_id):
     # Get the chat session with the provided chat_id
-    chat_session = ChatSession.objects.get(id=chat_id)
+    chat_session = get_object_or_404(ChatSession, id=chat_id)
 
     # Ensure the logged-in user is part of the chat session
     if request.user not in [chat_session.user1, chat_session.user2]:
@@ -42,3 +48,37 @@ def start_chat(request, user_id):
     )
 
     return redirect('chat_detail', chat_id=chat_session.id)
+
+@login_required
+def send_message(request, chat_id):
+    # Get the chat session or return a 404 if not found
+    chat_session = get_object_or_404(ChatSession, id=chat_id)
+
+    # Ensure the user is part of the chat session
+    if request.user not in [chat_session.user1, chat_session.user2]:
+        return JsonResponse({"error": "You are not part of this chat session."}, status=400)
+
+    if request.method == "POST":
+        # Parse the message content from the request body
+        message_data = request.body.decode("utf-8")
+        try:
+            message_content = json.loads(message_data).get("message")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format."}, status=400)
+
+        if message_content:
+            # Save the message to the database
+            message = Message.objects.create(
+                chat=chat_session,
+                sender=request.user,
+                content=message_content,
+                timestamp=timezone.now()
+            )
+
+            return JsonResponse({
+                "success": True,
+                "timestamp": message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            })
+        else:
+            return JsonResponse({"error": "Message content cannot be empty."}, status=400)
+    return JsonResponse({"error": "Invalid request method."}, status=405)

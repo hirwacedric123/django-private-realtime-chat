@@ -1,17 +1,31 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
 <h2>Chat with {% if chat_session.user1 == user %}{{ chat_session.user2.username }}{% else %}{{ chat_session.user1.username }}{% endif %}</h2>
 
-<div class="chat-box">
+<div class="chat-box" id="chat-box">
     {% for message in messages %}
         <div class="message">
-            <strong>{{ message.sender.username }}:</strong>
+            <strong>{{ message.sender }}:</strong>
             <p>{{ message.content }}</p>
             <small>{{ message.timestamp }}</small>
         </div>
     {% endfor %}
 </div>
 
-<!-- Form for sending a message will be added later -->
+<form id="message-form">
+    {% csrf_token %}
+    <textarea id="message-input" class="form-control" rows="3" placeholder="Type your message..." required></textarea>
+    <button type="submit" class="btn btn-primary mt-2">Send</button>
+</form>
 
+<!-- Pass the URL dynamically to JavaScript -->
+<script>
+    const sendMessageUrl = "{% url 'send_message' chat_id=chat_session.id %}";
+    const chatSessionId = {{ chat_session.id }};
+    console.log(`Sending messages to session ID: ${chatSessionId}`);  // Log the chat session ID for debugging
+</script>
+
+<script src="{% static 'chat/js/chat.js' %}"></script>
 {% endblock %}
