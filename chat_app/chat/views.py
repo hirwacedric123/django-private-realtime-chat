@@ -12,6 +12,7 @@ import json
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
@@ -45,18 +46,22 @@ def chat_detail(request, chat_id):
 
 @login_required
 def start_chat(request, user_id):
-    # Start a new chat with the user who has the given user_id
-    other_user = CustomUser.objects.get(id=user_id)
+    # Get the user we want to chat with
+    other_user = get_object_or_404(CustomUser, id=user_id)
 
     # Ensure the user is not trying to chat with themselves
     if request.user == other_user:
         return redirect('chat_home')
 
-    # Create a new chat session if it doesn't exist already
-    chat_session, created = ChatSession.objects.get_or_create(
-        user1=request.user,
-        user2=other_user
-    )
+    # Check if a chat already exists in either order
+    chat_session = ChatSession.objects.filter(
+        models.Q(user1=request.user, user2=other_user) |
+        models.Q(user1=other_user, user2=request.user)
+    ).first()
+
+    # If no existing chat session, create a new one
+    if not chat_session:
+        chat_session = ChatSession.objects.create(user1=request.user, user2=other_user)
 
     return redirect('chat_detail', chat_id=chat_session.id)
 
