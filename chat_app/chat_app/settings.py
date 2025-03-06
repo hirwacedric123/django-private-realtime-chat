@@ -73,7 +73,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'chat_app.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -132,10 +131,7 @@ ASGI_APPLICATION = 'chat_app.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer",  # Use Redis in production
     },
 }
 
