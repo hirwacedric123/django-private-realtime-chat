@@ -1,31 +1,63 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block content %}
-<h2>Chat with {% if chat_session.user1 == user %}{{ chat_session.user2.username }}{% else %}{{ chat_session.user1.username }}{% endif %}</h2>
+<h2 class="chat-header">
+    Chat with {% if chat_session.user1 == user %}{{ chat_session.user2.username }}{% else %}{{ chat_session.user1.username }}{% endif %}
+</h2>
 
 <div class="chat-box" id="chat-box">
     {% for message in messages %}
-        <div class="message">
-            <strong>{{ message.sender.username }}:</strong>
-            <p>{{ message.content }}</p>
-            <small>{{ message.timestamp }}</small>
+        <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+            <p class="message-content">{{ message.content }}</p>
+            <small class="message-timestamp">{{ message.timestamp }}</small>
         </div>
     {% endfor %}
 </div>
 
 <form id="message-form">
     {% csrf_token %}
-    <textarea id="message-input" class="form-control" rows="3" placeholder="Type your message..." required></textarea>
-    <button type="submit" class="btn btn-primary mt-2">Send</button>
+    <div class="input-container">
+        <textarea id="message-input" class="form-control" rows="2" placeholder="Type your message..." required></textarea>
+        <button type="submit" class="btn btn-primary">Send</button>
+    </div>
 </form>
 
 <!-- Pass the URL dynamically to JavaScript -->
 <script>
-    const sendMessageUrl = "{% url 'send_message' chat_id=chat_session.id %}";
-    const chatSessionId = {{ chat_session.id }};
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/{{ chat_session.id }}/'
+    );
+
+    chatSocket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const chatBox = document.getElementById("chat-box");
+
+        // Determine message alignment
+        const messageClass = data.sender === "{{ user.username }}" ? "sent" : "received";
+
+        // Append new message to chat
+        chatBox.innerHTML += `
+            <div class="message ${messageClass}">
+                <p class="message-content">${data.content}</p>
+                <small class="message-timestamp">${data.timestamp}</small>
+            </div>
+        `;
+
+        // Auto-scroll to the latest message
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    document.getElementById("message-form").onsubmit = function(event) {
+        event.preventDefault();
+        const messageInput = document.getElementById("message-input");
+
+        chatSocket.send(JSON.stringify({
+            "message": messageInput.value
+        }));
+
+        messageInput.value = "";  // Clear input field
+    };
 </script>
 
 <script src="{% static 'chat/js/chat.js' %}"></script>
 {% endblock %}
-
