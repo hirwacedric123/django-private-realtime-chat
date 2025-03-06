@@ -7,7 +7,7 @@
 <div class="chat-box" id="chat-box">
     {% for message in messages %}
         <div class="message">
-            <strong>{{ message.sender }}:</strong>
+            <strong>{{ message.sender.username }}:</strong>
             <p>{{ message.content }}</p>
             <small>{{ message.timestamp }}</small>
         </div>
@@ -24,7 +24,6 @@
 <script>
     const sendMessageUrl = "{% url 'send_message' chat_id=chat_session.id %}";
     const chatSessionId = {{ chat_session.id }};
-    console.log(`Sending messages to session ID: ${chatSessionId}`);  // Log the chat session ID for debugging
 </script>
 
 <script src="{% static 'chat/js/chat.js' %}"></script>
