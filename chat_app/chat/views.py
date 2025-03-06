@@ -9,14 +9,25 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from .models import ChatSession, Message
 import json
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 @login_required
 def chat_home(request):
     # Fetch all chat sessions where the logged-in user is either user1 or user2
     chat_sessions = ChatSession.objects.filter(user1=request.user) | ChatSession.objects.filter(user2=request.user)
     chat_sessions = chat_sessions.order_by('-created_at')  # Order by most recent chat
-    return render(request, 'chat/home.html', {'chat_sessions': chat_sessions})
+
+    # Fetch all users except the logged-in user
+    users = User.objects.exclude(id=request.user.id)
+
+    return render(request, 'chat/home.html', {
+        'chat_sessions': chat_sessions,
+        'users': users  # Pass users to the template
+    })
 
 @login_required
 def chat_detail(request, chat_id):
