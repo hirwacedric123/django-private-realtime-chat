@@ -8,7 +8,7 @@ def signup_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('chat_home')  # Redirect to chat home
+            return redirect('chat_home')
     else:
         form = SignupForm()
     return render(request, 'users/signup.html', {'form': form})
