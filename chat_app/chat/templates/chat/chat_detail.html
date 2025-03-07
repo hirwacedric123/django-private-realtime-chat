@@ -8,7 +8,16 @@
 <div class="chat-box" id="chat-box">
     {% for message in messages %}
         <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
-            <p class="message-content">{{ message.content }}</p>
+            {% if message.file_url %}
+                <!-- If message contains an attached file -->
+                {% if message.file_type|startswith:"image" %}
+                    <img src="{{ message.file_url }}" alt="Image Attachment" class="attachment-image">
+                {% else %}
+                    <a href="{{ message.file_url }}" target="_blank">Download Attachment</a>
+                {% endif %}
+            {% else %}
+                <p class="message-content">{{ message.content }}</p>
+            {% endif %}
             <small class="message-timestamp">{{ message.timestamp }}</small>
         </div>
     {% endfor %}
@@ -17,12 +26,15 @@
 <form id="message-form">
     {% csrf_token %}
     <div class="input-container">
-        <textarea id="message-input" class="form-control" rows="2" placeholder="Type your message..." required></textarea>
+        <textarea id="message-input" class="form-control" rows="2" placeholder="Type your message..."></textarea>
+        <input type="file" id="file-input" style="display: none;" />
+        <!-- File button to trigger file input -->
+        <button type="button" id="file-button" class="btn btn-secondary">Attach File</button>
         <button type="submit" class="btn btn-primary">Send</button>
     </div>
 </form>
 
-<!-- Pass the URL dynamically to JavaScript -->
+<!-- WebSocket script remains unchanged -->
 <script>
     const chatSocket = new WebSocket(
         'ws://' + window.location.host + '/ws/chat/{{ chat_session.id }}/'
@@ -31,33 +43,83 @@
     chatSocket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const chatBox = document.getElementById("chat-box");
-
-        // Determine message alignment
         const messageClass = data.sender === "{{ user.username }}" ? "sent" : "received";
+        let messageHTML = '';
 
-        // Append new message to chat
+        if(data.file_url) {
+            // If the message contains a file attachment
+            if(data.file_type && data.file_type.startsWith("image")) {
+                messageHTML = `<img src="${data.file_url}" alt="Image Attachment" class="attachment-image">`;
+            } else {
+                messageHTML = `<a href="${data.file_url}" target="_blank">Download Attachment</a>`;
+            }
+        } else {
+            messageHTML = `<p class="message-content">${data.content}</p>`;
+        }
+
         chatBox.innerHTML += `
             <div class="message ${messageClass}">
-                <p class="message-content">${data.content}</p>
+                ${messageHTML}
                 <small class="message-timestamp">${data.timestamp}</small>
             </div>
         `;
-
-        // Auto-scroll to the latest message
         chatBox.scrollTop = chatBox.scrollHeight;
     };
 
     document.getElementById("message-form").onsubmit = function(event) {
         event.preventDefault();
         const messageInput = document.getElementById("message-input");
-
-        chatSocket.send(JSON.stringify({
-            "message": messageInput.value
-        }));
-
-        messageInput.value = "";  // Clear input field
+        // Send text message only if there's no file waiting to be sent
+        if(messageInput.value.trim() !== "") {
+            chatSocket.send(JSON.stringify({
+                "message": messageInput.value
+            }));
+            messageInput.value = "";
+        }
     };
-</script>
 
+    // File input handling
+    const fileButton = document.getElementById("file-button");
+    const fileInput = document.getElementById("file-input");
+
+    fileButton.addEventListener("click", function() {
+        fileInput.click();
+    });
+
+    // When a file is selected, upload it via AJAX
+    fileInput.addEventListener("change", function() {
+        const file = fileInput.files[0];
+        if(file) {
+            uploadFile(file);
+        }
+    });
+
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("chat_id", "{{ chat_session.id }}");
+        formData.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch("{% url 'upload_file' %}", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // After successful file upload, send a message via WebSocket with file info
+                chatSocket.send(JSON.stringify({
+                    "file_url": data.file_url,
+                    "file_type": data.file_type
+                }));
+            } else {
+                console.error("File upload failed:", data.error);
+            }
+        })
+        .catch(error => {
+            console.error("Error uploading file:", error);
+        });
+    }
+</script>
 <script src="{% static 'chat/js/chat.js' %}"></script>
 {% endblock %}
