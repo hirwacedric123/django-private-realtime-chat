@@ -65,6 +65,7 @@ def start_chat(request, user_id):
 
     return redirect('chat_detail', chat_id=chat_session.id)
 
+
 @login_required
 def send_message(request, chat_id):
     # Get the chat session or return a 404 if not found
