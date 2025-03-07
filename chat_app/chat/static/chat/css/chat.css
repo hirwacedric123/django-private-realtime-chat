@@ -73,3 +73,14 @@
     background-color: #aaa;
     border-radius: 10px;
 }
+
+
+.message p {
+    font-size: 16px;
+    word-wrap: break-word;
+}
+
+.message p img {
+    width: 24px; /* Resize emoji images if needed */
+    height: 24px;
+}

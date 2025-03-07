@@ -14,13 +14,25 @@
     {% endfor %}
 </div>
 
+
 <form id="message-form">
     {% csrf_token %}
-    <div class="input-container">
-        <textarea id="message-input" class="form-control" rows="2" placeholder="Type your message..." required></textarea>
+    <div class="input-group">
+        <!-- Emoji Button -->
+        <button type="button" id="emoji-button">😊</button>
+
+        <!-- Message Input -->
+        <textarea id="message-input" class="form-control" rows="2" placeholder="Type a message..." required></textarea>
+
+        <!-- Send Button -->
         <button type="submit" class="btn btn-primary">Send</button>
     </div>
+
+    <!-- Emoji Picker Container -->
+    <div id="emoji-picker" style="display: none; position: absolute;"></div>
 </form>
+
+
 
 <!-- Pass the URL dynamically to JavaScript -->
 <script>
@@ -57,6 +69,14 @@
 
         messageInput.value = "";  // Clear input field
     };
+</script>
+<script>
+    $(document).ready(function(){
+        // Convert the textarea to an emoji area.
+        $('#message-input').emojiArea({
+            pickerPosition: "top"  // Position the emoji picker above the textarea
+        });
+    });
 </script>
 
 <script src="{% static 'chat/js/chat.js' %}"></script>
