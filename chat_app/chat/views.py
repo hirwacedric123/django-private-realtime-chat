@@ -13,8 +13,16 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.views.decorators.http import require_POST
+import os
 
 User = get_user_model()
+
+
+
+
 
 @login_required
 def chat_home(request):
@@ -99,3 +107,24 @@ def send_message(request, chat_id):
         else:
             return JsonResponse({"error": "Message content cannot be empty."}, status=400)
     return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
+@csrf_exempt  # For testing; in production, handle CSRF appropriately
+@require_POST
+def upload_file(request):
+    file_obj = request.FILES.get("file")
+    chat_id = request.POST.get("chat_id")
+    if not file_obj:
+        return JsonResponse({"success": False, "error": "No file provided."})
+    
+    # Create a file path; e.g., "chat_uploads/{chat_id}/filename.ext"
+    upload_path = os.path.join("chat_uploads", chat_id, file_obj.name)
+    saved_path = default_storage.save(upload_path, ContentFile(file_obj.read()))
+    file_url = default_storage.url(saved_path)
+    file_type = file_obj.content_type
+
+    return JsonResponse({
+        "success": True,
+        "file_url": file_url,
+        "file_type": file_type
+    })
